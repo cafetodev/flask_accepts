@@ -293,7 +293,14 @@ def responds(
         @wraps(func)
         def inner(*args, **kwargs):
             rv = func(*args, **kwargs)
-
+            parameter_status_code = status_code
+            if rv:              
+               if getattr(rv, '__iter__', None):
+                  if "status" in rv:
+                       if type(rv['status']) == int:
+                           parameter_status_code = rv['status']
+                       else:
+                           parameter_status_code = 200
             # If a Flask response has been made already, it is passed through unchanged
             if isinstance(rv, Response):
                 return rv
@@ -308,12 +315,6 @@ def responds(
                             description="Server attempted to return invalid data"
                         )
                
-                if "status" in serialized:
-                    if type(serialized['status']) == int:
-                        status_code = serialized['status']
-                    else:
-                        raise TypeError(description="Bad Http Status code")
-                       
                 # Apply the flask-restx mask after validation
                 serialized = _apply_restx_mask(serialized)
             else:
@@ -341,8 +342,8 @@ def responds(
 
             if not _is_method(func):
                 # Regular route, need to manually create Response
-                return jsonify(serialized), status_code
-            return serialized, status_code
+                return jsonify(serialized), parameter_status_code
+            return serialized, parameter_status_code
 
         # Add Swagger
         if api and use_swagger and _IS_METHOD:
